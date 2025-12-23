@@ -19,7 +19,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
@@ -52,8 +53,8 @@ class AccountServiceIntegrationTest {
 
         // then
         assertThat(response).isNotNull();
-        assertThat(response.account().getId()).isNotNull();
-        assertThat(response.account().getDocumentNumber()).isEqualTo(DOCUMENT_NUMBER);
+        assertThat(response.id()).isNotNull();
+        assertThat(response.documentNumber()).isEqualTo(DOCUMENT_NUMBER);
 
         List<Account> accounts = accountRepository.findAll();
         assertThat(accounts).hasSize(1);
@@ -122,12 +123,12 @@ class AccountServiceIntegrationTest {
 
         // when
         AccountResponse fetched =
-                accountService.getAccount(created.account().getId());
+                accountService.getAccount(created.id());
 
         // then
         assertThat(fetched).isNotNull();
-        assertThat(fetched.account().getId()).isEqualTo(created.account().getId());
-        assertThat(fetched.account().getDocumentNumber())
+        assertThat(fetched.id()).isEqualTo(created.id());
+        assertThat(fetched.documentNumber())
                 .isEqualTo(DOCUMENT_NUMBER);
     }
 

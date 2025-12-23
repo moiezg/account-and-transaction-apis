@@ -18,10 +18,11 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(TransactionController.class)
 class TransactionControllerApiTest {
@@ -53,16 +54,22 @@ class TransactionControllerApiTest {
                 .build();
 
         when(transactionService.createTransaction(any(CreateTransactionRequest.class)))
-                .thenReturn(new TransactionResponse(transaction));
+                .thenReturn(TransactionResponse.builder()
+                                .transactionId(transaction.getId())
+                                .accountId(transaction.getAccount().getId())
+                                .amount(transaction.getAmount())
+                                .operationType(transaction.getOperationType())
+                                .eventTimestamp(transaction.getEventDate())
+                                .build());
 
         mockMvc.perform(post("/transactions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.transaction.id").value(10L))
-                .andExpect(jsonPath("$.transaction.account.id").value(1L))
-                .andExpect(jsonPath("$.transaction.operationType").value(OperationType.fromId(2).name()))
-                .andExpect(jsonPath("$.transaction.amount").value(100.00));
+                .andExpect(jsonPath("$.transactionId").value(10L))
+                .andExpect(jsonPath("$.accountId").value(1L))
+                .andExpect(jsonPath("$.operationType").value(OperationType.fromId(2).name()))
+                .andExpect(jsonPath("$.amount").value(100.00));
     }
 
     /* ---------------------- 404 Not Found ---------------------- */

@@ -16,8 +16,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -56,8 +58,8 @@ class PismoE2ETest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(createAccount)))
                         .andExpect(status().isOk())
-                        .andExpect(jsonPath("$.account.id").exists())
-                        .andExpect(jsonPath("$.account.documentNumber")
+                        .andExpect(jsonPath("$.id").exists())
+                        .andExpect(jsonPath("$.documentNumber")
                                 .value("11122233344"))
                         .andReturn()
                         .getResponse()
@@ -65,7 +67,6 @@ class PismoE2ETest {
 
         Long accountId =
                 objectMapper.readTree(accountResponseJson)
-                        .get("account")
                         .get("id")
                         .asLong();
 
@@ -81,13 +82,13 @@ class PismoE2ETest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(createTransaction)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.transaction.amount").value(-100.00));
+                .andExpect(jsonPath("$.amount").value(-100.00));
 
         // 3️⃣ Get Account
         mockMvc.perform(get("/accounts/{id}", accountId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.account.id").value(accountId))
-                .andExpect(jsonPath("$.account.documentNumber")
+                .andExpect(jsonPath("$.id").value(accountId))
+                .andExpect(jsonPath("$.documentNumber")
                         .value("11122233344"));
 
         // DB sanity check
@@ -117,7 +118,6 @@ class PismoE2ETest {
 
         Long accountId =
                 objectMapper.readTree(accountJson)
-                        .get("account")
                         .get("id")
                         .asLong();
 

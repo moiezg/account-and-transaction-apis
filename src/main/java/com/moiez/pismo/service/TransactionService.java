@@ -1,7 +1,7 @@
 package com.moiez.pismo.service;
 
-import com.moiez.pismo.api.dto.request.CreateAccountRequest;
 import com.moiez.pismo.api.dto.request.CreateTransactionRequest;
+import com.moiez.pismo.api.dto.response.AccountResponse;
 import com.moiez.pismo.api.dto.response.TransactionResponse;
 import com.moiez.pismo.model.Account;
 import com.moiez.pismo.model.OperationType;
@@ -26,13 +26,16 @@ public class TransactionService {
 
     public TransactionResponse createTransaction(CreateTransactionRequest request) {
 
-        Account account = accountService.getAccount(request.accountId()).account();
+        AccountResponse account = accountService.getAccount(request.accountId());
         OperationType operationType = OperationType.fromId(request.operationTypeId());
 
         BigDecimal finalAmount = getFinalAmount(request.amount(), operationType);
 
         Transaction transaction = Transaction.builder()
-                .account(account)
+                .account(Account.builder()
+                        .id(account.id())
+                        .documentNumber(account.documentNumber())
+                        .build())
                 .operationType(operationType)
                 .amount(finalAmount)
                 .eventDate(LocalDateTime.now())
@@ -40,12 +43,22 @@ public class TransactionService {
 
         transaction = transactionRepository.save(transaction);
 
-        return new TransactionResponse(transaction);
+        return mapToTransactionResponse(transaction);
     }
 
     private BigDecimal getFinalAmount(BigDecimal amount, OperationType operationType) {
         return operationType.isDebit()
                 ? amount.negate()
                 : amount;
+    }
+
+    private TransactionResponse mapToTransactionResponse(Transaction transaction) {
+        return TransactionResponse.builder()
+                .transactionId(transaction.getId())
+                .accountId(transaction.getAccount().getId())
+                .amount(transaction.getAmount())
+                .operationType(transaction.getOperationType())
+                .eventTimestamp(transaction.getEventDate())
+                .build();
     }
 }

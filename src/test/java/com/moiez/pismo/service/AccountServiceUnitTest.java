@@ -6,8 +6,6 @@ import com.moiez.pismo.exception.BadRequestException;
 import com.moiez.pismo.exception.NotFoundException;
 import com.moiez.pismo.model.Account;
 import com.moiez.pismo.repository.AccountRepository;
-import com.moiez.pismo.service.AccountService;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -16,7 +14,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -53,8 +52,8 @@ class AccountServiceUnitTest {
 
         // then
         assertThat(response).isNotNull();
-        assertThat(response.account().getId()).isEqualTo(ACCOUNT_ID);
-        assertThat(response.account().getDocumentNumber()).isEqualTo(DOCUMENT_NUMBER);
+        assertThat(response.id()).isEqualTo(ACCOUNT_ID);
+        assertThat(response.documentNumber()).isEqualTo(DOCUMENT_NUMBER);
 
         verify(repository).existsByDocumentNumber(DOCUMENT_NUMBER);
         verify(repository).save(any(Account.class));
@@ -97,8 +96,8 @@ class AccountServiceUnitTest {
 
         // then
         assertThat(response).isNotNull();
-        assertThat(response.account().getId()).isEqualTo(ACCOUNT_ID);
-        assertThat(response.account().getDocumentNumber()).isEqualTo(DOCUMENT_NUMBER);
+        assertThat(response.id()).isEqualTo(ACCOUNT_ID);
+        assertThat(response.documentNumber()).isEqualTo(DOCUMENT_NUMBER);
 
         verify(repository).findById(ACCOUNT_ID);
         verifyNoMoreInteractions(repository);

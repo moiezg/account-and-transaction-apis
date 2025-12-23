@@ -1,11 +1,13 @@
 package com.moiez.pismo.model;
 
 import com.moiez.pismo.exception.BadRequestException;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 
 import java.util.Arrays;
 
 @Getter
+@Schema(description = "Transaction operation type")
 public enum OperationType {
 
     CASH_PURCHASE(1, true),

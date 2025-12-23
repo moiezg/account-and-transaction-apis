@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+
 public class Transaction {
 
     @Id
@@ -27,6 +28,7 @@ public class Transaction {
     @Enumerated(EnumType.STRING)
     private OperationType operationType;
 
+    @Column(precision = 12, scale = 2, nullable = false)
     private BigDecimal amount;
 
     private LocalDateTime eventDate;

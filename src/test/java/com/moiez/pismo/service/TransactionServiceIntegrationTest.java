@@ -21,7 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
@@ -61,7 +62,7 @@ class TransactionServiceIntegrationTest {
 
         CreateTransactionRequest request =
                 new CreateTransactionRequest(
-                        accountResponse.account().getId(),
+                        accountResponse.id(),
                         OperationType.CASH_PURCHASE.getId(), // debit
                         new BigDecimal("100.00")
                 );
@@ -72,7 +73,7 @@ class TransactionServiceIntegrationTest {
 
         // then
         assertThat(response).isNotNull();
-        assertThat(response.transaction().getAmount())
+        assertThat(response.amount())
                 .isEqualByComparingTo("-100.00");
 
         List<Transaction> transactions =
@@ -92,7 +93,7 @@ class TransactionServiceIntegrationTest {
 
         CreateTransactionRequest request =
                 new CreateTransactionRequest(
-                        accountResponse.account().getId(),
+                        accountResponse.id(),
                         OperationType.PAYMENT.getId(), // credit
                         new BigDecimal("250.00")
                 );
@@ -102,7 +103,7 @@ class TransactionServiceIntegrationTest {
                 transactionService.createTransaction(request);
 
         // then
-        assertThat(response.transaction().getAmount())
+        assertThat(response.amount())
                 .isEqualByComparingTo("250.00");
 
         Transaction transaction =
@@ -121,7 +122,7 @@ class TransactionServiceIntegrationTest {
 
         CreateTransactionRequest request =
                 new CreateTransactionRequest(
-                        account.account().getId(),
+                        account.id(),
                         999, // invalid operation type
                         new BigDecimal("50.00")
                 );

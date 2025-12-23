@@ -28,13 +28,19 @@ public class AccountService {
                 .build();
         account = repository.save(account);
 
-        return new AccountResponse(account);
+        return mapToAccountResponse(account);
     }
 
     public AccountResponse getAccount(Long id) {
-        Account account = repository.findById(id)
+        return repository.findById(id)
+                .map(this::mapToAccountResponse)
                 .orElseThrow(() -> new NotFoundException("Account not found"));
+    }
 
-        return new AccountResponse(account);
+    private AccountResponse mapToAccountResponse(Account account) {
+        return AccountResponse.builder()
+                .id(account.getId())
+                .documentNumber(account.getDocumentNumber())
+                .build();
     }
 }

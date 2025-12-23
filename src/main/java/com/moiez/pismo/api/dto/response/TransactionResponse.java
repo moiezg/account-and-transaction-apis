@@ -1,6 +1,54 @@
 package com.moiez.pismo.api.dto.response;
 
-import com.moiez.pismo.model.Transaction;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.moiez.pismo.model.OperationType;
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.NotNull;
+import lombok.Builder;
 
-public record TransactionResponse(Transaction transaction) {
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+@Schema
+@Builder
+public record TransactionResponse(
+
+        @Schema(
+                description = "Unique identifier of the transaction",
+                example = "1"
+        )
+        Long transactionId,
+
+        @Schema(
+                description = "Unique identifier of the account to which the transaction belongs",
+                example = "1"
+        )
+        Long  accountId,
+
+        @Schema(
+                description = "Transaction amount",
+                example = "150.75",
+                multipleOf = 0.01
+        )
+        @Digits(integer = 10, fraction = 2)
+        @NotNull
+        @JsonFormat(shape = JsonFormat.Shape.STRING)
+        BigDecimal amount,
+
+        @Schema(
+                description = "Transaction operation type",
+                example = "PAYMENT"
+        )
+        OperationType operationType,
+
+        @Schema(
+                description = "Transaction creation timestamp",
+                example = "2024-06-01T12:30:45",
+                format = "date-time"
+        )
+        @NotNull
+        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+        LocalDateTime eventTimestamp
+) {
 }

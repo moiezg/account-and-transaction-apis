@@ -5,7 +5,6 @@ import com.moiez.pismo.api.dto.request.CreateAccountRequest;
 import com.moiez.pismo.api.dto.response.AccountResponse;
 import com.moiez.pismo.exception.BadRequestException;
 import com.moiez.pismo.exception.NotFoundException;
-import com.moiez.pismo.model.Account;
 import com.moiez.pismo.service.AccountService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,7 +17,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(AccountController.class)
 public class AccountControllerApiTest {
@@ -36,20 +36,18 @@ public class AccountControllerApiTest {
     void shouldCreateAccount_return200() throws Exception {
         CreateAccountRequest request = new CreateAccountRequest("123");
 
-        Account account = Account.builder()
-                .id(1L)
-                .documentNumber("123")
-                .build();
-
         when(accountService.createAccount(any(CreateAccountRequest.class)))
-                .thenReturn(new AccountResponse(account));
+                .thenReturn(AccountResponse.builder()
+                                .id(1L)
+                                .documentNumber("123")
+                                .build());
 
         mockMvc.perform(post("/accounts")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.account.id").value(1L))
-                .andExpect(jsonPath("$.account.documentNumber").value("123"));
+                .andExpect(jsonPath("$.id").value(1L))
+                .andExpect(jsonPath("$.documentNumber").value("123"));
     }
 
     @Test
@@ -67,17 +65,15 @@ public class AccountControllerApiTest {
 
     @Test
     void shouldGetAccount_return200() throws Exception {
-        Account account = Account.builder()
+        when(accountService.getAccount(1L)).thenReturn(AccountResponse.builder()
                 .id(1L)
                 .documentNumber("12345678900")
-                .build();
-
-        when(accountService.getAccount(1L)).thenReturn(new AccountResponse(account));
+                .build());
 
         mockMvc.perform(get("/accounts/{id}", 1L))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.account.id").value(1L))
-                .andExpect(jsonPath("$.account.documentNumber").value("12345678900"));
+                .andExpect(jsonPath("$.id").value(1L))
+                .andExpect(jsonPath("$.documentNumber").value("12345678900"));
     }
 
     @Test

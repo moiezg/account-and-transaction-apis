@@ -1,5 +1,10 @@
 package com.moiez.pismo.api.dto.response;
 
-import com.moiez.pismo.model.Account;
+import lombok.Builder;
 
-public record AccountResponse(Account account) {}
+
+@Builder
+public record AccountResponse(
+        Long id,
+        String documentNumber
+) {}

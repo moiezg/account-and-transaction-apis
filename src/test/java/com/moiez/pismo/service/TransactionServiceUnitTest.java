@@ -4,12 +4,9 @@ import com.moiez.pismo.api.dto.request.CreateTransactionRequest;
 import com.moiez.pismo.api.dto.response.AccountResponse;
 import com.moiez.pismo.api.dto.response.TransactionResponse;
 import com.moiez.pismo.exception.BadRequestException;
-import com.moiez.pismo.model.Account;
 import com.moiez.pismo.model.OperationType;
 import com.moiez.pismo.model.Transaction;
 import com.moiez.pismo.repository.TransactionRepository;
-import com.moiez.pismo.service.AccountService;
-import com.moiez.pismo.service.TransactionService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -17,9 +14,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -48,13 +45,11 @@ class TransactionServiceUnitTest {
         CreateTransactionRequest request =
                 new CreateTransactionRequest(ACCOUNT_ID, OperationType.WITHDRAWAL.getId(), amount);
 
-        Account account = Account.builder()
-                .id(ACCOUNT_ID)
-                .documentNumber("12345678900")
-                .build();
-
         when(accountService.getAccount(ACCOUNT_ID))
-                .thenReturn(new AccountResponse(account));
+                .thenReturn(AccountResponse.builder()
+                        .id(ACCOUNT_ID)
+                        .documentNumber("12345678900")
+                        .build());
 
         when(transactionRepository.save(any(Transaction.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -64,9 +59,9 @@ class TransactionServiceUnitTest {
 
         // then
         assertThat(response).isNotNull();
-        assertThat(response.transaction().getAmount()).isEqualByComparingTo("-100.00");
-        assertThat(response.transaction().getOperationType()).isEqualTo(OperationType.WITHDRAWAL);
-        assertThat(response.transaction().getAccount().getId()).isEqualTo(ACCOUNT_ID);
+        assertThat(response.amount()).isEqualByComparingTo("-100.00");
+        assertThat(response.operationType()).isEqualTo(OperationType.WITHDRAWAL);
+        assertThat(response.accountId()).isEqualTo(ACCOUNT_ID);
 
         verify(accountService).getAccount(ACCOUNT_ID);
         verify(transactionRepository).save(any(Transaction.class));
@@ -85,13 +80,11 @@ class TransactionServiceUnitTest {
         CreateTransactionRequest request =
                 new CreateTransactionRequest(ACCOUNT_ID, OperationType.PAYMENT.getId(), amount);
 
-        Account account = Account.builder()
-                .id(ACCOUNT_ID)
-                .documentNumber("12345678900")
-                .build();
-
         when(accountService.getAccount(ACCOUNT_ID))
-                .thenReturn(new AccountResponse(account));
+                .thenReturn(AccountResponse.builder()
+                        .id(ACCOUNT_ID)
+                        .documentNumber("12345678900")
+                        .build());
 
         when(transactionRepository.save(any(Transaction.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -101,9 +94,9 @@ class TransactionServiceUnitTest {
 
         // then
         assertThat(response).isNotNull();
-        assertThat(response.transaction().getAmount()).isEqualByComparingTo("50.00");
-        assertThat(response.transaction().getOperationType()).isEqualTo(OperationType.PAYMENT);
-        assertThat(response.transaction().getAccount().getId()).isEqualTo(ACCOUNT_ID);
+        assertThat(response.amount()).isEqualByComparingTo("50.00");
+        assertThat(response.operationType()).isEqualTo(OperationType.PAYMENT);
+        assertThat(response.accountId()).isEqualTo(ACCOUNT_ID);
 
         verify(accountService).getAccount(ACCOUNT_ID);
         verify(transactionRepository).save(any(Transaction.class));
@@ -120,13 +113,11 @@ class TransactionServiceUnitTest {
         CreateTransactionRequest request =
                 new CreateTransactionRequest(ACCOUNT_ID, 999, new BigDecimal("10.00"));
 
-        Account account = Account.builder()
-                .id(ACCOUNT_ID)
-                .documentNumber("12345678900")
-                .build();
-
         when(accountService.getAccount(ACCOUNT_ID))
-                .thenReturn(new AccountResponse(account));
+                .thenReturn(AccountResponse.builder()
+                        .id(ACCOUNT_ID)
+                        .documentNumber("12345678900")
+                        .build());
 
         // when / then
         assertThatThrownBy(() -> transactionService.createTransaction(request))
