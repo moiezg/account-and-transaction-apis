@@ -61,7 +61,7 @@ The system is designed with **clean architecture**, **strong test coverage**, an
 - Spring Web
 - Spring Data JPA
 - Hibernate
-- H2 (local) or PostgreSQL (production-ready)
+- H2 (local)
 - Jackson (JSON serialization)
 
 ### Testing
@@ -69,7 +69,6 @@ The system is designed with **clean architecture**, **strong test coverage**, an
 - AssertJ
 - Spring Boot Test
 - MockMvc
-- Testcontainers (optional, recommended for real DB testing)
 
 ### Build
 - Maven
