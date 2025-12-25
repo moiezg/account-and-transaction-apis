@@ -1,6 +1,7 @@
 package com.moiez.pismo.api.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
@@ -28,8 +29,11 @@ public record CreateTransactionRequest (
 
     @Schema(
             description = "Transaction amount",
-            example = "123.45"
+            example = "123.45",
+            multipleOf = 0.01
     )
     @NotNull(message = "Transaction amount is required")
+    @Digits(integer = 12, fraction = 2,
+            message = "Transaction amount must have at most 2 decimal places")
     BigDecimal amount
 ) {}

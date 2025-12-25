@@ -59,7 +59,7 @@ class TransactionControllerApiTest {
                                 .accountId(transaction.getAccount().getId())
                                 .amount(transaction.getAmount())
                                 .operationType(transaction.getOperationType())
-                                .eventTimestamp(transaction.getEventDate())
+                                .eventTimestamp(transaction.getCreatedAt())
                                 .build());
 
         mockMvc.perform(post("/transactions")

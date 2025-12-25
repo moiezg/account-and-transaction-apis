@@ -10,7 +10,7 @@ import com.moiez.pismo.repository.TransactionRepository;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Service
 public class TransactionService {
@@ -38,7 +38,7 @@ public class TransactionService {
                         .build())
                 .operationType(operationType)
                 .amount(finalAmount)
-                .eventDate(LocalDateTime.now())
+                .createdAt(Instant.now())
                 .build();
 
         transaction = transactionRepository.save(transaction);
@@ -58,7 +58,7 @@ public class TransactionService {
                 .accountId(transaction.getAccount().getId())
                 .amount(transaction.getAmount())
                 .operationType(transaction.getOperationType())
-                .eventTimestamp(transaction.getEventDate())
+                .eventTimestamp(transaction.getCreatedAt())
                 .build();
     }
 }

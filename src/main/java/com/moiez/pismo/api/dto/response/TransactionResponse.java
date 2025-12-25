@@ -8,7 +8,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Schema
 @Builder
@@ -48,7 +48,6 @@ public record TransactionResponse(
                 format = "date-time"
         )
         @NotNull
-        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
-        LocalDateTime eventTimestamp
+        Instant eventTimestamp
 ) {
 }

@@ -5,9 +5,11 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.math.RoundingMode;
+import java.time.Instant;
 
 @Entity
 @Table(name = "transactions")
@@ -17,6 +19,9 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 
 public class Transaction {
+
+    public static final int SCALE = 2;
+    public static final RoundingMode ROUNDING = RoundingMode.HALF_EVEN;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -28,8 +33,12 @@ public class Transaction {
     @Enumerated(EnumType.STRING)
     private OperationType operationType;
 
-    @Column(precision = 12, scale = 2, nullable = false)
+    @Column(precision = 12, scale = SCALE, nullable = false)
     private BigDecimal amount;
 
-    private LocalDateTime eventDate;
+    @CreationTimestamp
+    @Column(nullable = false,
+            updatable = false,
+            columnDefinition = "TIMESTAMP(6)")
+    private Instant createdAt;
 }

@@ -49,7 +49,7 @@ class PismoE2ETest {
 
     @Test
     void e2e_createAccount_createTransaction_getAccount_success() throws Exception {
-        // 1️⃣ Create Account
+        // Create Account
         CreateAccountRequest createAccount =
                 new CreateAccountRequest("11122233344");
 
@@ -70,7 +70,7 @@ class PismoE2ETest {
                         .get("id")
                         .asLong();
 
-        // 2️⃣ Create Transaction
+        // Create Transaction
         CreateTransactionRequest createTransaction =
                 new CreateTransactionRequest(
                         accountId,
@@ -84,7 +84,7 @@ class PismoE2ETest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.amount").value(-100.00));
 
-        // 3️⃣ Get Account
+        // Get Account
         mockMvc.perform(get("/accounts/{id}", accountId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(accountId))
