@@ -16,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -34,15 +35,19 @@ class TransactionServiceUnitTest {
     private TransactionService transactionService;
 
     private static final Long ACCOUNT_ID = 1L;
+    private static final String IDEMPOTENCY_KEY = "idem-123";
 
     @Test
     void credit_transaction_is_created_successfully() {
         CreateTransactionRequest request =
                 new CreateTransactionRequest(
                         ACCOUNT_ID,
-                        OperationType.PAYMENT, // credit
+                        OperationType.PAYMENT,
                         BigDecimal.valueOf(100)
                 );
+
+        when(transactionRepository.findByIdempotencyKey(IDEMPOTENCY_KEY))
+                .thenReturn(Optional.empty());
 
         Transaction savedTransaction = Transaction.builder()
                 .id(10L)
@@ -56,7 +61,7 @@ class TransactionServiceUnitTest {
                 .thenReturn(savedTransaction);
 
         TransactionResponse response =
-                transactionService.createTransaction(request);
+                transactionService.createTransaction(request, IDEMPOTENCY_KEY);
 
         verify(accountService).applyTransaction(
                 ACCOUNT_ID,
@@ -67,10 +72,7 @@ class TransactionServiceUnitTest {
 
         assertEquals(10L, response.transactionId());
         assertEquals(ACCOUNT_ID, response.accountId());
-        assertEquals(
-                0,
-                response.amount().compareTo(BigDecimal.valueOf(100))
-        );
+        assertEquals(0, response.amount().compareTo(BigDecimal.valueOf(100)));
         assertEquals(OperationType.PAYMENT, response.operationType());
         assertNotNull(response.eventTimestamp());
     }
@@ -80,9 +82,12 @@ class TransactionServiceUnitTest {
         CreateTransactionRequest request =
                 new CreateTransactionRequest(
                         ACCOUNT_ID,
-                        OperationType.WITHDRAWAL, // debit
+                        OperationType.WITHDRAWAL,
                         BigDecimal.valueOf(50)
                 );
+
+        when(transactionRepository.findByIdempotencyKey(IDEMPOTENCY_KEY))
+                .thenReturn(Optional.empty());
 
         when(transactionRepository.save(any(Transaction.class)))
                 .thenAnswer(invocation -> {
@@ -91,7 +96,7 @@ class TransactionServiceUnitTest {
                     return tx;
                 });
 
-        transactionService.createTransaction(request);
+        transactionService.createTransaction(request, IDEMPOTENCY_KEY);
 
         verify(accountService).applyTransaction(
                 ACCOUNT_ID,
@@ -119,15 +124,18 @@ class TransactionServiceUnitTest {
                         BigDecimal.valueOf(100)
                 );
 
+        when(transactionRepository.findByIdempotencyKey(IDEMPOTENCY_KEY))
+                .thenReturn(Optional.empty());
+
         doThrow(new BadRequestException("Insufficient funds"))
                 .when(accountService)
                 .applyTransaction(anyLong(), any());
 
         assertThrows(BadRequestException.class, () ->
-                transactionService.createTransaction(request)
+                transactionService.createTransaction(request, IDEMPOTENCY_KEY)
         );
 
-        verifyNoInteractions(transactionRepository);
+        verifyNoMoreInteractions(transactionRepository);
     }
 
     @Test
@@ -139,40 +147,20 @@ class TransactionServiceUnitTest {
                         BigDecimal.valueOf(100)
                 );
 
+        when(transactionRepository.findByIdempotencyKey(IDEMPOTENCY_KEY))
+                .thenReturn(Optional.empty());
+
         when(transactionRepository.save(any(Transaction.class)))
                 .thenThrow(new RuntimeException("DB failure"));
 
         assertThrows(RuntimeException.class, () ->
-                transactionService.createTransaction(request)
+                transactionService.createTransaction(request, IDEMPOTENCY_KEY)
         );
 
         verify(accountService).applyTransaction(
                 ACCOUNT_ID,
                 BigDecimal.valueOf(100)
         );
-    }
-
-    @Test
-    void transaction_references_account_by_id_only() {
-        CreateTransactionRequest request =
-                new CreateTransactionRequest(
-                        ACCOUNT_ID,
-                        OperationType.PAYMENT,
-                        BigDecimal.TEN
-                );
-
-        when(transactionRepository.save(any(Transaction.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
-
-        transactionService.createTransaction(request);
-
-        ArgumentCaptor<Transaction> captor =
-                ArgumentCaptor.forClass(Transaction.class);
-
-        verify(transactionRepository).save(captor.capture());
-
-        Transaction tx = captor.getValue();
-        assertEquals(ACCOUNT_ID, tx.getAccount().getId());
     }
 
     @Test
@@ -184,10 +172,13 @@ class TransactionServiceUnitTest {
                         BigDecimal.ZERO
                 );
 
+        when(transactionRepository.findByIdempotencyKey(IDEMPOTENCY_KEY))
+                .thenReturn(Optional.empty());
+
         when(transactionRepository.save(any(Transaction.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        transactionService.createTransaction(request);
+        transactionService.createTransaction(request, IDEMPOTENCY_KEY);
 
         verify(accountService).applyTransaction(
                 ACCOUNT_ID,

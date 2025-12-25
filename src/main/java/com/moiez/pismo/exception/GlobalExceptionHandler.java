@@ -48,4 +48,13 @@ public class GlobalExceptionHandler {
                 .message(e.getMessage())
                 .build();
     }
+
+    @ResponseStatus(HttpStatus.CONFLICT)
+    @ExceptionHandler(ConflictingRequestException.class)
+    public ErrorResponse handleConflictingRequest(ConflictingRequestException e) {
+        return ErrorResponse.builder()
+                .status(HttpStatus.CONFLICT.value())
+                .message(e.getMessage())
+                .build();
+    }
 }

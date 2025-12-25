@@ -13,6 +13,8 @@ import java.util.Optional;
 public interface AccountRepository extends JpaRepository<Account, Long> {
     boolean existsByDocumentNumber(String documentNumber);
 
+    Optional<Account> findByIdempotencyKey(String idempotencyKey);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @QueryHints({
             @QueryHint(name = "jakarta.persistence.lock.timeout", value = "3000")

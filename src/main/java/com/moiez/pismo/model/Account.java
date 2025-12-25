@@ -29,6 +29,9 @@ public class Account {
     private Long id;
 
     @Column(nullable = false, unique = true)
+    private String idempotencyKey;
+
+    @Column(nullable = false, unique = true)
     private String documentNumber;
 
     @Column(nullable = false, precision = 12, scale = SCALE)

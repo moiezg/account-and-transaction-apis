@@ -3,10 +3,13 @@ package com.moiez.pismo.service;
 import com.moiez.pismo.api.dto.request.CreateAccountRequest;
 import com.moiez.pismo.api.dto.response.AccountResponse;
 import com.moiez.pismo.exception.BadRequestException;
+import com.moiez.pismo.exception.ConflictingRequestException;
 import com.moiez.pismo.exception.NotFoundException;
 import com.moiez.pismo.model.Account;
 import com.moiez.pismo.repository.AccountRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 
@@ -19,18 +22,20 @@ public class AccountService {
         this.repository = repository;
     }
 
-    public AccountResponse createAccount(CreateAccountRequest createAccountRequest) {
-        String documentNumber = createAccountRequest.documentNumber();
-        if (repository.existsByDocumentNumber(documentNumber)) {
-            throw new BadRequestException("Account already exists");
-        }
-
-        Account account = Account.builder()
-                .documentNumber(documentNumber)
-                .build();
-        account = repository.save(account);
-
-        return mapToAccountResponse(account);
+    @Transactional
+    public AccountResponse createAccount(CreateAccountRequest request, String idempotencyKey) {
+        return repository.findByIdempotencyKey(idempotencyKey)
+                .map(this::mapToAccountResponse)
+                .orElseGet(() -> {
+                    try {
+                        Account account = new Account();
+                        account.setDocumentNumber(request.documentNumber());
+                        account.setIdempotencyKey(idempotencyKey);
+                        return mapToAccountResponse(repository.save(account));
+                    } catch (DataIntegrityViolationException e) {
+                        throw new ConflictingRequestException("Account already exists");
+                    }
+                });
     }
 
     public AccountResponse getAccount(Long id) {

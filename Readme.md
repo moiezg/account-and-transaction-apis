@@ -233,10 +233,7 @@ mvn clean verify
 4. No authentication or authorization  
    Security is intentionally out of scope.
 
-5. No idempotency handling  
-   Duplicate transaction submissions are not deduplicated.
-
-6. Static operation types  
+5. Static operation types  
    `OperationType` values are predefined and not configurable.
 
 ---

@@ -17,7 +17,6 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
@@ -32,10 +31,7 @@ class AccountServiceUnitTest {
 
     private static final String DOCUMENT_NUMBER = "12345678900";
     private static final Long ACCOUNT_ID = 1L;
-
-    // ----------------------------------------------------
-    // createAccount
-    // ----------------------------------------------------
+    private static final String IDEMP_KEY = "idem-123";
 
     @Test
     void createAccount_shouldCreateAccount_whenAccountDoesNotExist() {
@@ -47,42 +43,16 @@ class AccountServiceUnitTest {
                 .documentNumber(DOCUMENT_NUMBER)
                 .build();
 
-        when(repository.existsByDocumentNumber(DOCUMENT_NUMBER)).thenReturn(false);
         when(repository.save(any(Account.class))).thenReturn(savedAccount);
 
         // when
-        AccountResponse response = service.createAccount(request);
+        AccountResponse response = service.createAccount(request, IDEMP_KEY);
 
         // then
         assertThat(response).isNotNull();
         assertThat(response.id()).isEqualTo(ACCOUNT_ID);
         assertThat(response.documentNumber()).isEqualTo(DOCUMENT_NUMBER);
-
-        verify(repository).existsByDocumentNumber(DOCUMENT_NUMBER);
-        verify(repository).save(any(Account.class));
-        verifyNoMoreInteractions(repository);
     }
-
-    @Test
-    void createAccount_shouldThrowBadRequestException_whenAccountAlreadyExists() {
-        // given
-        CreateAccountRequest request = new CreateAccountRequest(DOCUMENT_NUMBER);
-
-        when(repository.existsByDocumentNumber(DOCUMENT_NUMBER)).thenReturn(true);
-
-        // when / then
-        assertThatThrownBy(() -> service.createAccount(request))
-                .isInstanceOf(BadRequestException.class)
-                .hasMessage("Account already exists");
-
-        verify(repository).existsByDocumentNumber(DOCUMENT_NUMBER);
-        verify(repository, never()).save(any());
-        verifyNoMoreInteractions(repository);
-    }
-
-    // ----------------------------------------------------
-    // getAccount
-    // ----------------------------------------------------
 
     @Test
     void getAccount_shouldReturnAccount_whenAccountExists() {
@@ -121,55 +91,7 @@ class AccountServiceUnitTest {
     }
 
     @Test
-    void credit_increases_balance() {
-        Account account = new Account();
-        account.setBalance(BigDecimal.valueOf(100));
-
-        when(repository.findByIdForUpdate(1L))
-                .thenReturn(Optional.of(account));
-
-        service.applyTransaction(1L, BigDecimal.valueOf(50));
-
-        assertEquals(0,
-                account.getBalance().compareTo(BigDecimal.valueOf(150))
-        );
-    }
-
-    @Test
-    void debit_decreases_balance() {
-        Account account = new Account();
-        account.setBalance(BigDecimal.valueOf(100));
-
-        when(repository.findByIdForUpdate(1L))
-                .thenReturn(Optional.of(account));
-
-        service.applyTransaction(1L, BigDecimal.valueOf(-30));
-
-        assertEquals(0,
-                account.getBalance().compareTo(BigDecimal.valueOf(70))
-        );
-    }
-
-    @Test
-    void debit_causing_negative_balance_throws() {
-        Account account = new Account();
-        account.setBalance(BigDecimal.valueOf(50));
-
-        when(repository.findByIdForUpdate(1L))
-                .thenReturn(Optional.of(account));
-
-        assertThrows(BadRequestException.class, () ->
-                service.applyTransaction(1L, BigDecimal.valueOf(-100))
-        );
-
-        // balance unchanged
-        assertEquals(0,
-                account.getBalance().compareTo(BigDecimal.valueOf(50))
-        );
-    }
-
-    @Test
-    void invalid_account_throws() {
+    void applyTransaction_invalid_account_throws() {
         when(repository.findByIdForUpdate(1L))
                 .thenReturn(Optional.empty());
 

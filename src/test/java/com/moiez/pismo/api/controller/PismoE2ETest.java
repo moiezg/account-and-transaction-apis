@@ -56,9 +56,10 @@ class PismoE2ETest {
 
         String accountResponseJson =
                 mockMvc.perform(post("/accounts")
+                                .header("Idempotency-Key", "idem-123")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(createAccount)))
-                        .andExpect(status().isOk())
+                        .andExpect(status().isCreated())
                         .andExpect(jsonPath("$.id").exists())
                         .andExpect(jsonPath("$.documentNumber")
                                 .value("11122233344"))
@@ -80,9 +81,10 @@ class PismoE2ETest {
                 );
 
         mockMvc.perform(post("/transactions")
+                        .header("Idempotency-Key", "idem-1234")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(createTransaction)))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.amount").value(100.00));
 
         // Get Account
@@ -106,13 +108,14 @@ class PismoE2ETest {
         // given — account exists
         String accountJson =
                 mockMvc.perform(post("/accounts")
+                                .header("Idempotency-Key", "idem-123")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("""
                                         {
                                           "documentNumber": "55566677788"
                                         }
                                         """))
-                        .andExpect(status().isOk())
+                        .andExpect(status().isCreated())
                         .andReturn()
                         .getResponse()
                         .getContentAsString();
@@ -124,6 +127,7 @@ class PismoE2ETest {
 
         // when — invalid operationType
         mockMvc.perform(post("/transactions")
+                        .header("Idempotency-Key", "idem-1234")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -142,6 +146,7 @@ class PismoE2ETest {
     void e2e_multiple_transactions_update_balance_correctly() throws Exception {
         String accountJson =
                 mockMvc.perform(post("/accounts")
+                                .header("Idempotency-Key", "idem-123")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("""
                                     {
@@ -159,6 +164,7 @@ class PismoE2ETest {
 
         // credit
         mockMvc.perform(post("/transactions")
+                        .header("Idempotency-Key", "idem-1234")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                             {
@@ -167,10 +173,11 @@ class PismoE2ETest {
                               "amount": 200.00
                             }
                             """.formatted(accountId)))
-                .andExpect(status().isOk());
+                .andExpect(status().isCreated());
 
         // debit
         mockMvc.perform(post("/transactions")
+                        .header("Idempotency-Key", "idem-12345")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                             {
@@ -179,11 +186,10 @@ class PismoE2ETest {
                               "amount": 50.00
                             }
                             """.formatted(accountId)))
-                .andExpect(status().isOk());
+                .andExpect(status().isCreated());
 
         mockMvc.perform(get("/accounts/{id}", accountId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.balance").value(150.00));
     }
-
 }

@@ -24,23 +24,31 @@ public class TransactionService {
     }
 
     @Transactional
-    public TransactionResponse createTransaction(CreateTransactionRequest request) {
-        BigDecimal finalAmount = request.operationType().isDebit()
-                ? request.amount().negate()
-                : request.amount();
+    public TransactionResponse createTransaction(
+            CreateTransactionRequest request,
+            String idempotencyKey
+    ) {
+        return transactionRepository.findByIdempotencyKey(idempotencyKey)
+                .map(this::mapToTransactionResponse)
+                .orElseGet(() -> {
+                    BigDecimal finalAmount = request.operationType().isDebit()
+                            ? request.amount().negate()
+                            : request.amount();
 
-        accountService.applyTransaction(request.accountId(), finalAmount);
+                    accountService.applyTransaction(request.accountId(), finalAmount);
 
-        Transaction transaction = Transaction.builder()
-                .account(Account.builder().id(request.accountId()).build())
-                .operationType(request.operationType())
-                .amount(finalAmount)
-                .createdAt(Instant.now())
-                .build();
+                    Transaction transaction = Transaction.builder()
+                            .idempotencyKey(idempotencyKey)
+                            .account(Account.builder().id(request.accountId()).build())
+                            .operationType(request.operationType())
+                            .amount(finalAmount)
+                            .createdAt(Instant.now())
+                            .build();
 
-        transaction = transactionRepository.save(transaction);
+                    transaction = transactionRepository.save(transaction);
 
-        return mapToTransactionResponse(transaction);
+                    return mapToTransactionResponse(transaction);
+                });
     }
 
     private TransactionResponse mapToTransactionResponse(Transaction transaction) {

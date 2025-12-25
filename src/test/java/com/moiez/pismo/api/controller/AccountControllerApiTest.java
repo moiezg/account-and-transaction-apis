@@ -3,7 +3,7 @@ package com.moiez.pismo.api.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.moiez.pismo.api.dto.request.CreateAccountRequest;
 import com.moiez.pismo.api.dto.response.AccountResponse;
-import com.moiez.pismo.exception.BadRequestException;
+import com.moiez.pismo.exception.ConflictingRequestException;
 import com.moiez.pismo.exception.NotFoundException;
 import com.moiez.pismo.service.AccountService;
 import org.junit.jupiter.api.Test;
@@ -14,6 +14,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -31,36 +32,54 @@ public class AccountControllerApiTest {
 
     @MockBean
     private AccountService accountService;
+    
+    private static final String IDEMP_KEY = "idemp-123";
 
     @Test
-    void shouldCreateAccount_return200() throws Exception {
+    void missing_idempotency_key_returns_400() throws Exception {
+        String body = """
+            {
+              "documentNumber": "123"
+            }
+            """;
+
+        mockMvc.perform(post("/accounts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldCreateAccount_return201() throws Exception {
         CreateAccountRequest request = new CreateAccountRequest("123");
 
-        when(accountService.createAccount(any(CreateAccountRequest.class)))
+        when(accountService.createAccount(any(CreateAccountRequest.class), eq(IDEMP_KEY)))
                 .thenReturn(AccountResponse.builder()
                                 .id(1L)
                                 .documentNumber("123")
                                 .build());
 
         mockMvc.perform(post("/accounts")
+                        .header("Idempotency-key", IDEMP_KEY)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1L))
                 .andExpect(jsonPath("$.documentNumber").value("123"));
     }
 
     @Test
-    void shouldReturn400_whenAccountAlreadyExists() throws Exception {
+    void shouldReturn409_whenAccountAlreadyExists() throws Exception {
         CreateAccountRequest request = new CreateAccountRequest("123");
 
-        when(accountService.createAccount(any(CreateAccountRequest.class)))
-                .thenThrow(new BadRequestException("Account already exists"));
+        when(accountService.createAccount(any(CreateAccountRequest.class), eq(IDEMP_KEY)))
+                .thenThrow(new ConflictingRequestException("Account already exists"));
 
         mockMvc.perform(post("/accounts")
+                        .header("Idempotency-key", IDEMP_KEY)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isConflict());
     }
 
     @Test

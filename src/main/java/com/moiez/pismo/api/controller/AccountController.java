@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,8 +24,11 @@ public class AccountController {
 
     @PostMapping
     @Operation(summary = "Create an account")
-    public ResponseEntity<AccountResponse> create(@RequestBody @Valid CreateAccountRequest request) {
-        return ResponseEntity.ok(service.createAccount(request));
+    public ResponseEntity<AccountResponse> create(
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
+            @RequestBody @Valid CreateAccountRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(service.createAccount(request, idempotencyKey));
     }
 
     @GetMapping("/{id}")

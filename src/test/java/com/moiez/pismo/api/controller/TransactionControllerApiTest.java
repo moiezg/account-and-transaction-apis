@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.moiez.pismo.api.dto.request.CreateTransactionRequest;
 import com.moiez.pismo.api.dto.response.TransactionResponse;
 import com.moiez.pismo.exception.BadRequestException;
-import com.moiez.pismo.exception.NotFoundException;
 import com.moiez.pismo.model.Account;
 import com.moiez.pismo.model.OperationType;
 import com.moiez.pismo.model.Transaction;
@@ -19,7 +18,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.math.BigDecimal;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -53,7 +53,7 @@ class TransactionControllerApiTest {
                 .amount(new BigDecimal("100.00"))
                 .build();
 
-        when(transactionService.createTransaction(any(CreateTransactionRequest.class)))
+        when(transactionService.createTransaction(any(CreateTransactionRequest.class), anyString()))
                 .thenReturn(TransactionResponse.builder()
                                 .transactionId(transaction.getId())
                                 .accountId(transaction.getAccount().getId())
@@ -63,35 +63,72 @@ class TransactionControllerApiTest {
                                 .build());
 
         mockMvc.perform(post("/transactions")
+                        .header("Idempotency-Key", "idem-123")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.transactionId").value(10L))
                 .andExpect(jsonPath("$.accountId").value(1L))
                 .andExpect(jsonPath("$.operationType").value(OperationType.PAYMENT.getId()))
                 .andExpect(jsonPath("$.amount").value(100.00));
     }
 
-    /* ---------------------- 404 Not Found ---------------------- */
+    @Test
+    void missing_idempotency_key_returns_400() throws Exception {
+        String body = """
+            {
+              "accountId": 1,
+              "operationType": 2,
+              "amount": 100
+            }
+            """;
+
+        mockMvc.perform(post("/transactions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest());
+    }
 
     @Test
-    void shouldReturn404_whenRelatedEntityNotFound() throws Exception {
+    void idempotency_key_is_forwarded_to_service() throws Exception {
+        String body = """
+            {
+              "accountId": 1,
+              "operationType": 4,
+              "amount": 100
+            }
+            """;
+
+        when(transactionService.createTransaction(any(), any()))
+                .thenReturn(mock(TransactionResponse.class));
+
+        mockMvc.perform(post("/transactions")
+                        .header("Idempotency-Key", "idem-123")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated());
+
+        verify(transactionService)
+                .createTransaction(any(), eq("idem-123"));
+    }
+
+    @Test
+    void shouldReturnBadRequest_whenRelatedEntityNotFound() throws Exception {
         CreateTransactionRequest request = new CreateTransactionRequest(
                 99L,
                 OperationType.WITHDRAWAL,
                 new BigDecimal("100.00")
         );
 
-        when(transactionService.createTransaction(any(CreateTransactionRequest.class)))
-                .thenThrow(new NotFoundException("Account not found"));
+        when(transactionService.createTransaction(any(CreateTransactionRequest.class), anyString()))
+                .thenThrow(new BadRequestException("Invalid accountId"));
 
         mockMvc.perform(post("/transactions")
+                        .header("Idempotency-Key", "idem-123")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isBadRequest());
     }
-
-    /* ---------------------- 400 Bad Request ---------------------- */
 
     @Test
     void shouldReturn400_whenOperationTypeIdIsInvalid() throws Exception {
@@ -101,13 +138,13 @@ class TransactionControllerApiTest {
                 new BigDecimal("100.00")
         );
 
-        when(transactionService.createTransaction(any(CreateTransactionRequest.class)))
+        when(transactionService.createTransaction(any(CreateTransactionRequest.class), anyString()))
                 .thenThrow(new BadRequestException("Invalid operation type"));
 
         mockMvc.perform(post("/transactions")
+                        .header("Idempotency-Key", "idem-123")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
     }
-
 }
