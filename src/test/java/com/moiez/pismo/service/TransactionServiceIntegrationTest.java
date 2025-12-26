@@ -2,6 +2,7 @@ package com.moiez.pismo.service;
 
 import com.moiez.pismo.api.dto.request.CreateTransactionRequest;
 import com.moiez.pismo.exception.BadRequestException;
+import com.moiez.pismo.exception.ConflictingRequestException;
 import com.moiez.pismo.model.Account;
 import com.moiez.pismo.model.OperationType;
 import com.moiez.pismo.repository.AccountRepository;
@@ -18,6 +19,7 @@ import java.math.BigDecimal;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -184,6 +186,45 @@ class TransactionServiceIntegrationTest {
     }
 
     @Test
+    void concurrent_requests_with_same_idempotency_key_are_handled_correctly() throws InterruptedException {
+        Account account = createAccount(BigDecimal.valueOf(100));
+        String sameKey = "race-key";
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch latch = new CountDownLatch(2);
+        AtomicInteger successCount = new AtomicInteger(0);
+        AtomicInteger conflictCount = new AtomicInteger(0);
+
+        Runnable task = () -> {
+            try {
+                transactionService.createTransaction(
+                        debit(account.getId(), BigDecimal.valueOf(10)),
+                        sameKey
+                );
+                successCount.incrementAndGet();
+            } catch (ConflictingRequestException e) {
+                conflictCount.incrementAndGet();
+            } catch (Exception e) {
+                // Ignore other exceptions
+            } finally {
+                latch.countDown();
+            }
+        };
+
+        executor.submit(task);
+        executor.submit(task);
+
+        latch.await();
+
+        // We expect exactly 1 success. The other request will either fail with Conflict 
+        // (if it blocked on the lock) or succeed idempotently (if it ran after commit).
+        // In either case, the balance should only be deducted ONCE.
+        Account updated = accountRepository.findById(account.getId()).orElseThrow();
+        assertThat(updated.getBalance()).isEqualByComparingTo(BigDecimal.valueOf(90));
+        assertEquals(1, transactionRepository.count());
+    }
+
+    @Test
     void idempotent_retry_does_not_apply_balance_twice() {
         Account account = createAccount(BigDecimal.valueOf(100));
 
@@ -201,10 +242,11 @@ class TransactionServiceIntegrationTest {
     }
 
     private Account createAccount(BigDecimal balance) {
-        Account account = new Account();
-        account.setIdempotencyKey("idem-123");
-        account.setDocumentNumber("123");
-        account.setBalance(balance);
+        Account account = Account.builder()
+                .idempotencyKey("idem-123")
+                .documentNumber("123")
+                .balance(balance)
+                .build();
         return accountRepository.save(account);
     }
 

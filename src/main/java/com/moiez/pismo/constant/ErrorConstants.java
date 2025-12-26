@@ -8,4 +8,5 @@ public final class ErrorConstants {
     public static final String ACCOUNT_NOT_FOUND = "Account not found";
     public static final String INSUFFICIENT_FUNDS = "Insufficient funds";
     public static final String ACCOUNT_ALREADY_EXISTS = "Account already exists";
+    public static final String TRANSACTION_ALREADY_EXISTS = "Transaction already processed";
 }

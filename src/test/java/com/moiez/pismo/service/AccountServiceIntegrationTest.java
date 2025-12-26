@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.moiez.pismo.constant.ErrorConstants.ACCOUNT_ALREADY_EXISTS;
 import static com.moiez.pismo.constant.ErrorConstants.ACCOUNT_NOT_FOUND;
@@ -100,13 +101,18 @@ class AccountServiceIntegrationTest {
 
         ExecutorService executor = Executors.newFixedThreadPool(2);
         CountDownLatch latch = new CountDownLatch(2);
+        AtomicInteger successCount = new AtomicInteger(0);
+        AtomicInteger conflictCount = new AtomicInteger(0);
 
         Runnable task = () -> {
             try {
                 accountService.createAccount(
                         new CreateAccountRequest(DOCUMENT_NUMBER), IDEMP_KEY);
-            } catch (Exception ignored) {
-                // expected for one thread
+                successCount.incrementAndGet();
+            } catch (ConflictingRequestException e) {
+                conflictCount.incrementAndGet();
+            } catch (Exception e) {
+                e.printStackTrace(); // Fail visibly if unexpected error
             } finally {
                 latch.countDown();
             }
@@ -118,6 +124,11 @@ class AccountServiceIntegrationTest {
         latch.await();
 
         // then
+        // We expect either:
+        // 1. 1 Success + 1 Conflict (Race condition hit DB constraint)
+        // 2. 2 Successes (Second thread hit the optimistic check)
+        assertThat(successCount.get()).isGreaterThanOrEqualTo(1);
+        
         List<Account> accounts = accountRepository.findAll();
         assertThat(accounts).hasSize(1);
         assertThat(accounts.get(0).getDocumentNumber())

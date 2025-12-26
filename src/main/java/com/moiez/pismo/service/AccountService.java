@@ -11,6 +11,8 @@ import com.moiez.pismo.repository.AccountRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -28,7 +30,7 @@ public class AccountService {
         this.repository = repository;
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.READ_COMMITTED)
     public AccountResponse createAccount(CreateAccountRequest request, String idempotencyKey) {
         log.info("Processing create account request with [Idempotency-Key: {}]", idempotencyKey);
         Optional<Account> existingAccount = repository.findByIdempotencyKey(idempotencyKey);
@@ -46,7 +48,7 @@ public class AccountService {
             log.info("Account created successfully with ID: {}", saved.getId());
             return mapToAccountResponse(saved);
         } catch (DataIntegrityViolationException e) {
-            log.error("An account already exists with the provided document number", e);
+            log.error("Account already exists", e);
             throw new ConflictingRequestException(ACCOUNT_ALREADY_EXISTS);
         }
     }

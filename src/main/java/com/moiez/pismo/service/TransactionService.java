@@ -3,18 +3,21 @@ package com.moiez.pismo.service;
 import com.moiez.pismo.api.dto.request.CreateTransactionRequest;
 import com.moiez.pismo.api.dto.response.TransactionResponse;
 import com.moiez.pismo.constant.ApiConstants;
+import com.moiez.pismo.exception.ConflictingRequestException;
 import com.moiez.pismo.model.Account;
 import com.moiez.pismo.model.Transaction;
 import com.moiez.pismo.repository.TransactionRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.util.Optional;
+
+import static com.moiez.pismo.constant.ErrorConstants.TRANSACTION_ALREADY_EXISTS;
 
 @Slf4j
 @Service
@@ -58,10 +61,15 @@ public class TransactionService {
                 .amount(finalAmount)
                 .build();
 
-        Transaction saved = transactionRepository.save(transaction);
-        log.info("Transaction created successfully with ID: {}", saved.getId());
-
-        return mapToTransactionResponse(saved);
+        try {
+            Transaction saved = transactionRepository.save(transaction);
+            log.info("Transaction created successfully [ID: {}, Account: {}, Amount: {}]", 
+                    saved.getId(), saved.getAccount().getId(), saved.getAmount());
+            return mapToTransactionResponse(saved);
+        } catch (DataIntegrityViolationException e) {
+            log.warn("Transaction conflict detected [Idempotency-Key: {}]", idempotencyKey);
+            throw new ConflictingRequestException(TRANSACTION_ALREADY_EXISTS);
+        }
     }
 
     private TransactionResponse mapToTransactionResponse(Transaction transaction) {
