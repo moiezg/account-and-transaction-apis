@@ -57,7 +57,7 @@ public class TransactionService {
                 : request.amount();
 
         if (request.operationType().equals(OperationType.PAYMENT)) {
-            settleDischarges(request.accountId(), request.amount());
+            finalAmount = settleDischarges(request.accountId(), request.amount());
         }
 
         Transaction transaction = Transaction.builder()
@@ -80,17 +80,30 @@ public class TransactionService {
         }
     }
 
-    private void settleDischarges(Long accountId, BigDecimal remainingPaymentAmount) {
-        List<Transaction> transactionsToSettle =  transactionRepository.findByAccountId(accountId);
+    private BigDecimal settleDischarges(Long accountId, BigDecimal paymentAmount) {
+        List<Transaction> transactionsToSettle = transactionRepository.findByAccountId(accountId);
+        BigDecimal remaining = paymentAmount;
 
         for (Transaction t : transactionsToSettle) {
-            t.setBalance(t.getBalance().add(remainingPaymentAmount));
-            if (t.getBalance().compareTo(BigDecimal.ZERO) == 0) {
-                t.setSettled(true);
+            if (remaining.compareTo(BigDecimal.ZERO) <= 0) {
+                break;
+            }
+
+            BigDecimal currBalance = t.getBalance();
+
+            // only settle negative balances (discharges)
+            if (currBalance.compareTo(BigDecimal.ZERO) < 0) {
+                BigDecimal amountToApply = remaining.min(currBalance.abs());
+                t.setBalance(currBalance.add(amountToApply));
+                remaining = remaining.subtract(amountToApply);
+                t.setSettled(t.getBalance().compareTo(BigDecimal.ZERO) == 0);
             }
         }
+
         transactionRepository.saveAll(transactionsToSettle);
+        return remaining;
     }
+
 
     private TransactionResponse mapToTransactionResponse(Transaction transaction) {
         return TransactionResponse.builder()
