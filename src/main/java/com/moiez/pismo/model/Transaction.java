@@ -39,6 +39,12 @@ public class Transaction {
     @Column(precision = 12, scale = SCALE, nullable = false)
     private BigDecimal amount;
 
+    @Column(precision = 12, scale = SCALE, nullable = false)
+    private BigDecimal balance;
+
+    @Column
+    private boolean settled;
+
     @CreationTimestamp
     @Column(nullable = false,
             updatable = false,

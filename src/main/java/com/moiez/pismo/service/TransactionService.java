@@ -5,8 +5,11 @@ import com.moiez.pismo.api.dto.response.TransactionResponse;
 import com.moiez.pismo.constant.ApiConstants;
 import com.moiez.pismo.exception.ConflictingRequestException;
 import com.moiez.pismo.model.Account;
+import com.moiez.pismo.model.OperationType;
 import com.moiez.pismo.model.Transaction;
 import com.moiez.pismo.repository.TransactionRepository;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -15,6 +18,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 import static com.moiez.pismo.constant.ErrorConstants.TRANSACTION_ALREADY_EXISTS;
@@ -52,13 +56,17 @@ public class TransactionService {
                 ? request.amount().negate()
                 : request.amount();
 
-        accountService.applyTransaction(request.accountId(), finalAmount);
+        if (request.operationType().equals(OperationType.PAYMENT)) {
+            settleDischarges(request.accountId(), request.amount());
+        }
 
         Transaction transaction = Transaction.builder()
                 .idempotencyKey(idempotencyKey)
                 .account(Account.builder().id(request.accountId()).build())
                 .operationType(request.operationType())
+                .balance(finalAmount)
                 .amount(finalAmount)
+                .settled(request.operationType().equals(OperationType.PAYMENT))
                 .build();
 
         try {
@@ -72,11 +80,24 @@ public class TransactionService {
         }
     }
 
+    private void settleDischarges(Long accountId, BigDecimal remainingPaymentAmount) {
+        List<Transaction> transactionsToSettle =  transactionRepository.findByAccountId(accountId);
+
+        for (Transaction t : transactionsToSettle) {
+            t.setBalance(t.getBalance().add(remainingPaymentAmount));
+            if (t.getBalance().compareTo(BigDecimal.ZERO) == 0) {
+                t.setSettled(true);
+            }
+        }
+        transactionRepository.saveAll(transactionsToSettle);
+    }
+
     private TransactionResponse mapToTransactionResponse(Transaction transaction) {
         return TransactionResponse.builder()
                 .transactionId(transaction.getId())
                 .accountId(transaction.getAccount().getId())
                 .amount(transaction.getAmount())
+                .balance(transaction.getBalance())
                 .operationType(transaction.getOperationType())
                 .eventTimestamp(transaction.getCreatedAt())
                 .build();

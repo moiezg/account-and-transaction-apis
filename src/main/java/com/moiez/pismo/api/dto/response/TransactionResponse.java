@@ -36,6 +36,11 @@ public record TransactionResponse(
         @JsonFormat(shape = JsonFormat.Shape.STRING)
         BigDecimal amount,
 
+        @Digits(integer = 10, fraction = 2)
+        @NotNull
+        @JsonFormat(shape = JsonFormat.Shape.STRING)
+        BigDecimal balance,
+
         @Schema(
                 description = "Transaction operation type",
                 example = "PAYMENT"
